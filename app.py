@@ -7,18 +7,18 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-from huggingface_hub import InferenceClient
+from groq import Groq
 import traceback
 
 # ================== LOAD API ==================
 load_dotenv()
-hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
+groq_key = os.getenv("GROQ_API_KEY")
 
-if not hf_token:
-    st.error("❌ HuggingFace API key not found.")
+if not groq_key:
+    st.error("❌ Groq API key not found.")
     st.stop()
 
-client = InferenceClient(token=hf_token)
+client = Groq(api_key=groq_key)
 
 # ================== UI ==================
 st.set_page_config(page_title="AI Knowledge Assistant", page_icon="🤖")
@@ -77,16 +77,14 @@ if query:
         placeholder.write("⏳ Thinking...")
 
         try:
-            # 🔥 Retrieve docs
             docs = retriever.invoke(query)
 
             if not docs:
-                placeholder.write("❌ No relevant data found in documents.")
+                placeholder.write("❌ No relevant data found.")
                 st.stop()
 
             context = "\n".join([doc.page_content for doc in docs])
 
-            # 🔥 Prompt
             prompt = f"""
 Answer ONLY from the context below.
 If not found, say "I don't know."
@@ -98,17 +96,15 @@ Question:
 {query}
 """
 
-            # 🔥 HF working call
-            response = client.text_generation(
-                model="google/flan-t5-base",
-                prompt=prompt,
-                max_new_tokens=256
+            # 🔥 GROQ CALL (FAST + WORKING)
+            response = client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
             )
 
-            answer = response.strip()
-
-            if not answer:
-                answer = "⚠️ No response generated."
+            answer = response.choices[0].message.content
 
             placeholder.write(answer)
 
