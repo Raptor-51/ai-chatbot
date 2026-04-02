@@ -100,7 +100,7 @@ Question:
 
             # 🔥 HF working call
             response = client.text_generation(
-                model="google/flan-t5-large",
+                model="google/flan-t5-base",
                 prompt=prompt,
                 max_new_tokens=256
             )
