@@ -8,16 +8,16 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from huggingface_hub import InferenceClient
+import traceback
 
 # ================== LOAD API ==================
 load_dotenv()
 hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
 
 if not hf_token:
-    st.error("❌ HuggingFace API key not found. Set HUGGINGFACE_API_TOKEN in .env")
+    st.error("❌ HuggingFace API key not found.")
     st.stop()
 
-# ✅ Client
 client = InferenceClient(token=hf_token)
 
 # ================== UI ==================
@@ -53,7 +53,7 @@ def load_data():
 db = load_data()
 
 if db is None:
-    st.warning("⚠️ No PDFs found in 'data' folder. Please add some PDFs.")
+    st.warning("⚠️ No PDFs found in 'data' folder.")
     st.stop()
 
 retriever = db.as_retriever(search_kwargs={"k": 2})
@@ -62,7 +62,6 @@ retriever = db.as_retriever(search_kwargs={"k": 2})
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Show previous messages
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
@@ -78,14 +77,19 @@ if query:
         placeholder.write("⏳ Thinking...")
 
         try:
-            # 🔥 Retrieve relevant docs
+            # 🔥 Retrieve docs
             docs = retriever.invoke(query)
+
+            if not docs:
+                placeholder.write("❌ No relevant data found in documents.")
+                st.stop()
+
             context = "\n".join([doc.page_content for doc in docs])
 
             # 🔥 Prompt
             prompt = f"""
-You are an AI assistant. Answer ONLY from the given context.
-If the answer is not in the context, say "I don't know."
+Answer ONLY from the context below.
+If not found, say "I don't know."
 
 Context:
 {context}
@@ -94,21 +98,24 @@ Question:
 {query}
 """
 
-            # ✅ FINAL WORKING CHAT API
+            # 🔥 HF working call
             response = client.text_generation(
-                 model="google/flan-t5-large",
-                 prompt=prompt,
-                 max_new_tokens=512
+                model="google/flan-t5-large",
+                prompt=prompt,
+                max_new_tokens=256
             )
 
-            answer = response
+            answer = response.strip()
 
-        
+            if not answer:
+                answer = "⚠️ No response generated."
+
             placeholder.write(answer)
 
             st.session_state.messages.append(
                 {"role": "assistant", "content": answer}
             )
 
-        except Exception as e:
-            placeholder.write(f"❌ Error: {e}")
+        except Exception:
+            error_msg = traceback.format_exc()
+            placeholder.write(f"❌ Error:\n{error_msg}")
