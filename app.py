@@ -95,16 +95,15 @@ Question:
 """
 
             # ✅ FINAL WORKING CHAT API
-            response = client.chat.completions.create(
-                model="HuggingFaceH4/zephyr-7b-beta",
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=512
+            response = client.text_generation(
+                 model="google/flan-t5-large",
+                 prompt=prompt,
+                 max_new_tokens=512
             )
 
-            answer = response.choices[0].message.content
+            answer = response
 
+        
             placeholder.write(answer)
 
             st.session_state.messages.append(
