@@ -79,7 +79,7 @@ if query:
 
         try:
             # 🔥 Retrieve relevant docs
-            docs = retriever.get_relevant_documents(query)
+            docs = retriever.invoke(query)
             context = "\n".join([doc.page_content for doc in docs])
 
             # 🔥 Prompt
